@@ -1,37 +1,44 @@
-// 江苏油价监控（Surge 脚本）
-// 数据源：汽油价格网江苏页 http://www.qiyoujiage.com/jiangsu.shtml
+// 江苏油价监控（Surge 脚本）v3
+// 数据源：汽油价格网江苏页（手机站优先，多个地址依次兜底）
 // 两种模式（由模块里的 argument 决定）：
 //   notify —— 定时任务用：与上次记录比对，价格有变动才发通知；首次运行只存档、不打扰
 //   panel  —— 面板用：显示当前油价、较上次记录的涨跌、下次调价日（站点标注过期则不显示）
 const MODE = (($argument || "notify") + "").trim();
 const URLS = [
+  "http://m.qiyoujiage.com/jiangsu.shtml",
   "http://www.qiyoujiage.com/jiangsu.shtml",
   "https://www.qiyoujiage.com/jiangsu.shtml"
 ];
 const KEY = "jiangsu_oil_prices_v1";
 
 const ITEMS = [
-  { key: "92", name: "92#汽油", re: /江苏92#汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
-  { key: "95", name: "95#汽油", re: /江苏95#汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
-  { key: "98", name: "98#汽油", re: /江苏98#汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
-  { key: "d0", name: "0#柴油",  re: /江苏0#柴油[^0-9]*([0-9]+\.[0-9]{1,2})/ }
+  { key: "92", name: "92#汽油", re: /江苏92[#号]汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
+  { key: "95", name: "95#汽油", re: /江苏95[#号]汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
+  { key: "98", name: "98#汽油", re: /江苏98[#号]汽油[^0-9]*([0-9]+\.[0-9]{1,2})/ },
+  { key: "d0", name: "0#柴油",  re: /江苏0[#号]柴油[^0-9]*([0-9]+\.[0-9]{1,2})/ }
 ];
 
 fetchFrom(0);
 
 function fetchFrom(idx) {
-  if (idx >= URLS.length) return fail("网络请求失败，请稍后再试");
+  if (idx >= URLS.length) return fail("网络请求失败（v3 已试 3 个地址）");
   $httpClient.get(
     {
       url: URLS[idx],
       timeout: 15,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Referer": "http://www.qiyoujiage.com/"
       }
     },
     (err, resp, data) => {
-      if (err || !data || (resp && resp.status >= 400)) return fetchFrom(idx + 1);
+      if (err || !data || (resp && resp.status >= 400)) {
+        console.log("江苏油价监控：第 " + (idx + 1) + " 个地址失败 " + URLS[idx] + " err=" + err + " status=" + (resp && resp.status));
+        return fetchFrom(idx + 1);
+      }
       const prices = {};
       for (const it of ITEMS) {
         const m = data.match(it.re);
