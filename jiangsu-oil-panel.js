@@ -154,25 +154,6 @@ if (cur.p0!= null) L.push(`🛢 0号柴油　 ${cur.p0.toFixed(2)} 元　${arrow
 L.push("┈┈┈┈┈┈┈┈┈┈┈┈");
 L.push(`🧮 加满${TANK_L}L　92号 ${Math.round(cur.p92 * TANK_L)} 元 · 95号 ${Math.round(cur.p95 * TANK_L)} 元`);
 
-// 上次调价：汽车之家表里的日期是“开始执行日”，调价实际发生在前一天 24 时
-let lastEffective = null;
-if (last) {
-const [mm, dd] = last.date.split("-").map(Number);
-let y = nowYear;
-if (utc(y, mm, dd) > today) y -= 1;
-lastEffective = utc(y, mm, dd);
-const adj = new Date(lastEffective - DAY);
-const days = Math.round((today - adj.getTime()) / DAY);
-L.push(`📅 上次调价　${pad(adj.getUTCMonth() + 1)}-${pad(adj.getUTCDate())} 24时（${days} 天前）`);
-}
-
-// 上一个窗口若在上次调价之后，说明那一轮没调（搁浅）
-const passed = WINDOWS.map(parseYMD).filter((w) => w.t < today);
-const lastWin = passed[passed.length - 1];
-if (lastWin && lastEffective!== null && lastWin.t + DAY > lastEffective) {
-L.push(`⏸ ${pad(lastWin.m)}-${pad(lastWin.d)} 窗口未调价（搁浅）`);
-}
-
 // 下次窗口：第一个 >= 今天的窗口（当天 24 时才生效）
 const nextWin = WINDOWS.map(parseYMD).find((w) => w.t >= today);
 if (nextWin) {
@@ -185,16 +166,11 @@ const key = `${nextWin.y}-${pad(nextWin.m)}-${pad(nextWin.d)}`;
 if (FORECAST && FORECAST.window === key) {
 L.push(`🔮 预期92号　≈ ${(cur.p92 + FORECAST.d92).toFixed(2)} 元　${arrow(FORECAST.d92)}`);
 L.push(`🔮 预期95号　≈ ${(cur.p95 + FORECAST.d95).toFixed(2)} 元　${arrow(FORECAST.d95)}`);
-if (FORECAST.note) L.push(`　　${FORECAST.note}`);
 }
 } else {
 L.push("🗓 下次窗口　请更新脚本里的 WINDOWS");
 }
 
-if (rows.length >= 3) {
-const hist = rows.slice(0, HISTORY_N).map((r) => r.p92).reverse();
-L.push(`📈 近${hist.length}次92号　${spark(hist)}　${hist[0].toFixed(2)}→${hist[hist.length - 1].toFixed(2)}`);
-}
 L.push(`🕒 更新于 ${pad(now.getHours())}:${pad(now.getMinutes())}`);
 if (note) L.push(note);
 
