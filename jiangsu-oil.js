@@ -1,10 +1,13 @@
 // 江苏油价监控（Surge 脚本）
-// 数据源：汽油价格网江苏页 https://www.qiyoujiage.com/jiangsu.shtml
+// 数据源：汽油价格网江苏页 http://www.qiyoujiage.com/jiangsu.shtml
 // 两种模式（由模块里的 argument 决定）：
 //   notify —— 定时任务用：与上次记录比对，价格有变动才发通知；首次运行只存档、不打扰
 //   panel  —— 面板用：显示当前油价、较上次记录的涨跌、下次调价日（站点标注过期则不显示）
 const MODE = (($argument || "notify") + "").trim();
-const URL = "https://www.qiyoujiage.com/jiangsu.shtml";
+const URLS = [
+  "http://www.qiyoujiage.com/jiangsu.shtml",
+  "https://www.qiyoujiage.com/jiangsu.shtml"
+];
 const KEY = "jiangsu_oil_prices_v1";
 
 const ITEMS = [
@@ -14,25 +17,31 @@ const ITEMS = [
   { key: "d0", name: "0#柴油",  re: /江苏0#柴油[^0-9]*([0-9]+\.[0-9]{1,2})/ }
 ];
 
-$httpClient.get(
-  {
-    url: URL,
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+fetchFrom(0);
+
+function fetchFrom(idx) {
+  if (idx >= URLS.length) return fail("网络请求失败，请稍后再试");
+  $httpClient.get(
+    {
+      url: URLS[idx],
+      timeout: 15,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+      }
+    },
+    (err, resp, data) => {
+      if (err || !data || (resp && resp.status >= 400)) return fetchFrom(idx + 1);
+      const prices = {};
+      for (const it of ITEMS) {
+        const m = data.match(it.re);
+        if (m) prices[it.key] = parseFloat(m[1]);
+      }
+      if (Object.keys(prices).length < 2) return fail("解析失败：数据源页面结构可能已变化");
+      handle(prices, parseNext(data));
     }
-  },
-  (err, resp, data) => {
-    if (err || !data) return fail("网络请求失败，请稍后再试");
-    const prices = {};
-    for (const it of ITEMS) {
-      const m = data.match(it.re);
-      if (m) prices[it.key] = parseFloat(m[1]);
-    }
-    if (Object.keys(prices).length < 2) return fail("解析失败：数据源页面结构可能已变化");
-    handle(prices, parseNext(data));
-  }
-);
+  );
+}
 
 function parseNext(html) {
   const m = html.match(/下次油价\s*(\d{1,2})月(\d{1,2})日24时\s*调整/);
