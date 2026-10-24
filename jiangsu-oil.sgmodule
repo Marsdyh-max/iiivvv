@@ -1,0 +1,11 @@
+#!name=江苏油价监控
+#!desc=每天 09:05 自动查询江苏油价（92/95/98/0#柴油），价格变动时推送通知；面板可看当前油价。数据源：汽油价格网。
+#!category=工具
+#!arguments=
+
+[Script]
+江苏油价监控 = type=cron, cronexp="5 9 * * *", timeout=30, script-path=https://raw.githubusercontent.com/Marsdyh-max/iiivvv/main/jiangsu-oil.js, argument=notify
+江苏油价面板 = type=generic, timeout=20, script-path=https://raw.githubusercontent.com/Marsdyh-max/iiivvv/main/jiangsu-oil.js, argument=panel
+
+[Panel]
+江苏油价 = script-name=江苏油价面板, title=江苏油价, style=info
