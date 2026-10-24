@@ -1,4 +1,4 @@
-// 江苏油价监控（Surge 脚本）v3
+// 江苏油价监控（Surge 脚本）v4
 // 数据源：汽油价格网江苏页（手机站优先，多个地址依次兜底）
 // 两种模式（由模块里的 argument 决定）：
 //   notify —— 定时任务用：与上次记录比对，价格有变动才发通知；首次运行只存档、不打扰
@@ -21,10 +21,11 @@ const ITEMS = [
 fetchFrom(0);
 
 function fetchFrom(idx) {
-  if (idx >= URLS.length) return fail("网络请求失败（v3 已试 3 个地址）");
+  if (idx >= URLS.length) return fail("网络请求失败（v4 直连已试 3 个地址）");
   $httpClient.get(
     {
       url: URLS[idx],
+      policy: "DIRECT",
       timeout: 15,
       headers: {
         "User-Agent":
